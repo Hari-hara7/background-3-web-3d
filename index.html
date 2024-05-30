@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Responsive 3D Rotating Cube Face Background</title>
+  <title>Dynamic 3D Animated Background</title>
   <style>
     body, html {
       margin: 0;
@@ -15,13 +15,17 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      color: white;
       font-family: Arial, sans-serif;
+      color: white;
     }
     canvas {
       display: block;
+      position: absolute;
+      top: 0;
+      left: 0;
       width: 100%;
       height: 100%;
+      z-index: 0;
     }
     .content {
       position: absolute;
@@ -30,21 +34,38 @@
       transform: translate(-50%, -50%);
       text-align: center;
       z-index: 1;
+      padding: 20px;
     }
     .content h1 {
       font-size: 4vw;
       margin: 0;
     }
     .content p {
-      font-size: 5vw;
+      font-size: 1.5vw;
       margin: 10px 0 0;
+    }
+    @media (max-width: 768px) {
+      .content h1 {
+        font-size: 6vw;
+      }
+      .content p {
+        font-size: 3vw;
+      }
+    }
+    @media (max-width: 480px) {
+      .content h1 {
+        font-size: 8vw;
+      }
+      .content p {
+        font-size: 4vw;
+      }
     }
   </style>
 </head>
 <body>
   <div class="content">
     <h1>Welcome to My Website</h1>
-    <p>Enjoy the 3D animated background</p>
+    <p>Enjoy the dynamic 3D animated background</p>
   </div>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.9.1/gsap.min.js"></script>
@@ -56,58 +77,76 @@
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
-    // Lighting
-    const ambientLight = new THREE.AmbientLight(0x404040);
-    scene.add(ambientLight);
+    // Create icosahedron geometry
+    const icosahedronGeometry = new THREE.IcosahedronGeometry(10, 0);
+    const icosahedronMaterial = new THREE.MeshPhongMaterial({ color: 0x0000ff }); // Blue color
+    const icosahedron = new THREE.Mesh(icosahedronGeometry, icosahedronMaterial);
+    scene.add(icosahedron);
 
-    const pointLight = new THREE.PointLight(0xffffff, 1, 100);
-    pointLight.position.set(10, 10, 10);
-    scene.add(pointLight);
+    // Create particles
+    const particlesCount = 1000;
+    const particlesGeometry = new THREE.BufferGeometry();
+    const particlesPositions = new Float32Array(particlesCount * 3);
 
-    // Create a grid of cubes
-    const gridSize = 10;
-    const cubeSize = 0.5;
-    const cubes = [];
-
-    for (let x = -gridSize; x <= gridSize; x++) {
-      for (let y = -gridSize; y <= gridSize; y++) {
-        const geometry = new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize);
-        const material = new THREE.MeshStandardMaterial({ color: 0x44aa88, metalness: 0.5, roughness: 0.5 });
-        const cube = new THREE.Mesh(geometry, material);
-        cube.position.set(x, y, 0);
-        scene.add(cube);
-        cubes.push(cube);
-      }
+    for (let i = 0; i < particlesCount; i++) {
+      const radius = 20;
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.random() * Math.PI * 2;
+      const x = radius * Math.sin(theta) * Math.cos(phi);
+      const y = radius * Math.sin(theta) * Math.sin(phi);
+      const z = radius * Math.cos(theta);
+      particlesPositions[i * 3] = x;
+      particlesPositions[i * 3 + 1] = y;
+      particlesPositions[i * 3 + 2] = z;
     }
 
-    camera.position.z = 20;
+    particlesGeometry.setAttribute('position', new THREE.BufferAttribute(particlesPositions, 3));
+    const particlesMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 0.1 });
+    const particles = new THREE.Points(particlesGeometry, particlesMaterial);
+    scene.add(particles);
 
-    // Animate the cubes in a wave pattern
-    const animateCubes = () => {
-      cubes.forEach((cube, index) => {
-        gsap.to(cube.rotation, {
-          duration: 2,
-          y: Math.PI * 2,
-          ease: "power1.inOut",
-          repeat: -1,
-          yoyo: true,
-          delay: index * 0.1
-        });
-      });
-    };
+    // Set camera position
+    camera.position.z = 30;
 
+    // Ambient light
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+    scene.add(ambientLight);
+
+    // Point light
+    const pointLight = new THREE.PointLight(0xffffff, 1);
+    pointLight.position.set(25, 25, 25);
+    scene.add(pointLight);
+
+    // Animation
     const animate = () => {
       requestAnimationFrame(animate);
+      icosahedron.rotation.x += 0.005; // Decreased rotation speed
+      icosahedron.rotation.y += 0.005; // Decreased rotation speed
+
+      // Move particles more slowly
+      particles.geometry.attributes.position.array.forEach((_, index) => {
+        const radius = 20;
+        const theta = Math.random() * Math.PI * 2;
+        const phi = Math.random() * Math.PI * 2;
+        const x = radius * Math.sin(theta) * Math.cos(phi) * 0.1; // Decreased movement
+        const y = radius * Math.sin(theta) * Math.sin(phi) * 0.1; // Decreased movement
+        const z = radius * Math.cos(theta) * 0.1; // Decreased movement
+        particles.geometry.attributes.position.array[index * 3] = x;
+        particles.geometry.attributes.position.array[index * 3 + 1] = y;
+        particles.geometry.attributes.position.array[index * 3 + 2] = z;
+      });
+      particles.geometry.attributes.position.needsUpdate = true;
+
       renderer.render(scene, camera);
     };
 
     animate();
-    animateCubes();
 
     // Handle window resize
     window.addEventListener('resize', () => {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
+     
       renderer.setSize(window.innerWidth, window.innerHeight);
     });
   </script>
